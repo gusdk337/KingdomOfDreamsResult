@@ -607,5 +607,12 @@ public class UIDreamMineDirector : MonoBehaviour
 ```
 ▲ UIDreamMineDirector 스크립트
 
-
 </details>
+
+&nbsp;
+
+## ❗BGM
+   > - 자체 제작
+   > - 6~8 스테이지
+
+https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/42433560-1593-4fcc-85d9-6d756f3ca2c4
