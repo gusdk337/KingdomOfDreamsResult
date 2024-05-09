@@ -35,10 +35,9 @@ https://youtu.be/C9GL3ZHPBqE?si=HJIeB4Sw_RqOLXZG
 - 오프닝 제작
 - 클리어 씬 제작
 - 플레이어 행동 제작(채광)
-- 자체 BGM 제작(스테이지 6~8)
-- 발소리 적용
 - 광산 맵 제작
 - 꿈 광산 맵 제작
+- 자체 BGM 제작(스테이지 6~8)
   
 &nbsp;
 
@@ -51,6 +50,8 @@ https://youtu.be/C9GL3ZHPBqE?si=HJIeB4Sw_RqOLXZG
 
 ## ❗캐릭터 선택 
    > - 이진 트리를 사용해 질문의 대답에 따라 캐릭터가 달라지는 것을 구현
+
+  ![캐릭터생성](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/f53392c1-fcc2-4500-b13a-1512b376bb1b)
 
 <details>
  <summary>코드 보기</summary>
@@ -259,16 +260,352 @@ https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/b8c145eb-f374-
 
 &nbsp;
 
-## ❗오프닝
-   > - 신규 유저일 경우 오프닝 동영상 재생
+## ❗클리어 씬
+   > - 미션 완료 후 npc 부활 및 스테이지 부활 장면 제작
    > - 시네머신을 사용해 제작
+   > - npc 부활의 경우 쉐이더를 이용해 흑백과 컬러를 Lerp 시킴
+
+![npc01Clear-ezgif com-video-to-gif-converter](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/384c9c5a-1fe0-4a75-9299-9c887970c68c)  
+![npc02Clear-ezgif com-video-to-gif-converter](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/fed67eda-2650-41ca-888f-a65166cca020)
+![npc03Clear-ezgif com-video-to-gif-converter](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/c660741a-6ba7-4877-9545-acbc1f0b3150)
+![npc04Clear-ezgif com-video-to-gif-converter](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/fc60adef-e8a4-4777-b80e-b4e187f893cd)
+![npc05Clear-ezgif com-video-to-gif-converter](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/3e3485d7-7475-4714-819b-b53690f88ee0)  
+
+▲ npc 부활 시네머신
+
+&nbsp;
+
+![01-ezgif com-video-to-gif-converter](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/59d11946-e3e8-417a-a77a-996850b3951d)
+![0701-ezgif com-video-to-gif-converter](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/0b23089f-1b02-45f5-8fe6-526ad5d202b4)
+
+▲ 스테이지 부활 시네머신 중 일부
+
+&nbsp;
+
+![엔딩](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/869b4d7e-1cdd-4e23-b2b5-bcef8269a934)
+
+▲ 엔딩 시네머신
+
+&nbsp;
+
+## ❗채광
+   > - 5가지의 행동 중 채광
+   > - 광산에 들어가면 채광 가능
+   > - 확률적으로 꿈 광산 입장 가능
+
+![채광](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/3261bef7-d5de-459c-b4f3-264da87c3ca1)
+
+▲ 광산
+
+![꿈광산](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/be86d0dd-a7e4-44a2-a7f3-c0e201f3ce15)
+
+▲ 꿈 광산
 
 
 <details>
  <summary>코드 보기</summary>
  
 ```ts
+using Cinemachine;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class MineMain : MonoBehaviour
+{
+    [SerializeField]
+    private UIStage06Director director;
+    public GameObject playerPrefab;
+    public CinemachineVirtualCamera followCam;
+
+    public int stageID;
+
+    private Player player;
+
+    private bool isClicked;
+
+    private void Awake()
+    {
+        var go = GameObject.Find("UIStage06Director");
+        go.SetActive(true);
+        this.director = go.GetComponent<UIStage06Director>();
+    }
+
+    public void Start()
+    {
+        var mine_SC = SoundManager.GetSoundConnectionForThisLevel("Mine");
+        SoundManager.PlayConnection(mine_SC);
+
+        this.Init();
+    }
+    public void Init()
+    {
+        //플레이어, UI 생성
+        this.player = new Player(this.playerPrefab);
+        this.player.State = new NormalState(this.player);
+
+        this.player.mono.Init();
+
+        this.player.mono.joystick = this.director.joystick;
+        this.followCam.Follow = this.player.mono.transform;
+        this.followCam.LookAt = this.player.mono.transform;
+
+        //상호작용 버튼 클릭
+        this.director.btn_Interaction.onClick.AddListener(() => {
+            this.isClicked = true;
+            switch (this.player.mono.location)
+            {
+                case Enums.ePlayerLocation.Mine:
+                    this.player.State = new MiningState(this.player);
+                    break;
+            }
+            Debug.LogFormat("IState:{0}", this.player.State);
+            this.player.DoAction();
+
+            Invoke("IsClicked", 2f);
+        });
+
+        //미션 클리어 이벤트
+        EventManager.instance.onAchieved = (data) => {
+
+        };
+    }
+    private void Update()
+    {
+        //상호작용 버튼 활성화, 비활성화
+        if (this.player.mono.isTargeting && this.player.mono.actionTarget != null && this.isClicked == false)
+        {
+            this.director.btn_Interaction.interactable = true;
+            var atlas = AtlasManager.instance.GetAtlasByName("Interaction");
+            var sprite = atlas.GetSprite("Icon_ItemIcon_Pickax");
+            this.director.icon_Interaction.sprite = sprite;
+            this.director.icon_Interaction.gameObject.SetActive(true);
+        }
+        else
+        {
+            this.director.btn_Interaction.interactable = false;
+            this.director.icon_Interaction.gameObject.SetActive(false);
+        }
+    }
+
+    public void IsClicked()
+    {
+        this.isClicked = false;
+    }
+}
 
 ```
-▲ UICreateCharacter 스크립트
+▲ MineMain 스크립트
+
+```ts
+    private void Start()
+    {
+        lastIronPosition = transform.position;
+    }
+
+    public void Iron()
+    {
+        lastIronPosition = transform.position; // 철이 캐진 위치 기억
+        gameObject.SetActive(false); // 철 비활성화
+        GenerateIronPiece(); // 철 조각 생성
+        GenerateDreamPieces(); //꿈 조각 생성
+        Invoke("GenerateIron", ironRespawnTime); // 일정 시간 후 철 생성
+    }
+
+    private void GenerateIronPiece()
+    {
+        ironPiece = Instantiate(ironPiecePrefab, transform.position, transform.rotation);
+        ironPiece.transform.position = lastIronPosition; // 철이 사라진 위치에 철 조각 생성
+    }
+
+```
+▲ MiningIron 스크립트 중 일부
+
+```ts
+    public GameObject prefab; // 생성할 프리팹
+
+    private List<Vector3> positions = new List<Vector3>(); // 생성한 위치를 저장할 리스트
+
+    private void SpawnPrefabs()
+    {
+        for (int i = 0; i < 50; i++)
+        {
+            Vector3 spawnPosition = GetSpawnPosition();
+            Quaternion spawnRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            GameObject newPrefab = Instantiate(prefab, spawnPosition, spawnRotation);
+            positions.Add(spawnPosition);
+        }
+    }
+
+    private Vector3 GetSpawnPosition()
+    {
+        Vector3 spawnPosition = Vector3.zero;
+        bool isOverlap = true;
+
+        // 중복되지 않는 위치 찾기
+        while (isOverlap)
+        {
+            float xPos = Random.Range(-10.85f, 9.73f);
+            float zPos = Random.Range(5.07f, -5.79f);
+            spawnPosition = new Vector3(xPos, 0f, zPos);
+
+            isOverlap = false;
+            foreach (Vector3 pos in positions)
+            {
+                if (Vector3.Distance(spawnPosition, pos) < prefab.transform.localScale.x)
+                {
+                    isOverlap = true;
+                    break;
+                }
+            }
+        }
+        return spawnPosition;
+    }
+
+```
+▲ DreamMineMain 스크립트 중 일부
+
+```ts
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class MiningDream : MonoBehaviour
+{
+    public GameObject dreamPiecePrefab;
+
+    private GameObject dreamPiece;
+    private Vector3 lastIronPosition;
+
+    private void Start()
+    {
+        lastIronPosition = transform.position;
+    }
+
+
+    public void Dream()
+    {
+        lastIronPosition = transform.position; // 꿈이 캐진 위치 기억
+        gameObject.SetActive(false); // 꿈 비활성화
+        GenerateDreamPiece(); // 꿈 조각 생성
+    }
+
+    private void GenerateDreamPiece()
+    {
+        dreamPiece = Instantiate(dreamPiecePrefab, transform.position, transform.rotation);
+        dreamPiece.transform.position = lastIronPosition; // 꿈이 사라진 위치에 꿈 조각 생성
+    }
+
+}
+
+```
+▲ MiningDream 스크립트
+
+```ts
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+public class UIDreamMineDirector : MonoBehaviour
+{
+    private int dreamCount;
+    //페이드 아웃
+    public Image imgPopup;
+    public TMP_Text txtWelcome;
+
+    public float fadeSpeed = 0.5f;
+    public float currentAlpha = 1f;
+
+    //슬라이더
+    public Slider slider;
+    public float maxTime = 30f;
+    public float currentTime;
+    public GameObject timeSlider;
+
+    //결과창
+    public Image imgResult;
+    public TMP_Text txtCnt;
+
+    public void Init()
+    {
+        currentTime = 0f;
+        slider.minValue = 0f;
+        slider.maxValue = maxTime;
+        slider.value = currentTime;
+        dreamCount = 0;
+
+        EventManager.instance.dreamCount = (cnt) =>
+        {
+            this.dreamCount++;
+        };
+    }
+
+    private void Update()
+    {
+        //팝업창 페이드 아웃
+        this.FadeOutImage();
+
+        //60초 타이머
+        this.Timer();
+    }
+
+    public void FadeOutImage()
+    {
+        this.currentAlpha -= fadeSpeed * Time.deltaTime;
+
+        if (this.currentAlpha <= 0)
+        {
+            this.imgPopup.gameObject.SetActive(false);
+        }
+
+        //알파 값 변경
+        Color newColor0 = imgPopup.color;
+        newColor0.a = currentAlpha;
+        imgPopup.color = newColor0;
+
+        Color newColor1 = txtWelcome.color;
+        newColor1.a = currentAlpha;
+        txtWelcome.color = newColor1;
+    }
+
+    public void Timer()
+    {
+        if(currentTime < maxTime)
+        {
+            currentTime += Time.deltaTime;
+            slider.value = currentTime;
+        }
+        else if(currentTime >= maxTime)
+        {
+            currentTime = 0f;
+
+            this.PlusDream(this.dreamCount);
+        }
+    }
+
+    public void PlusDream(int cnt)
+    {
+        txtCnt.text = string.Format("X {0}", cnt);
+        this.imgResult.gameObject.SetActive(true);
+
+
+        InfoManager.instance.DreamAcount(cnt);
+
+        StartCoroutine(WaitPlusDream());
+    }
+    private IEnumerator WaitPlusDream()
+    {
+        yield return YieldCache.WaitForSeconds(2f);
+
+        EventDispatcher.instance.SendEvent<Enums.ePortalType>((int)LHMEventType.eEventType.ENTER_PORTAL, Enums.ePortalType.Stage);
+    }
+}
+
+```
+▲ UIDreamMineDirector 스크립트
+
+
 </details>
