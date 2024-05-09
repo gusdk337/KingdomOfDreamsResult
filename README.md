@@ -273,6 +273,105 @@ https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/b8c145eb-f374-
 
 ▲ npc 부활 시네머신
 
+<details>
+ <summary>코드 보기</summary>
+ 
+```ts
+Shader "Custom/NPC"
+{
+    Properties
+    {
+        _MainTex ("Albedo (RGB)", 2D) = "white" {}
+        _MainTex2 ("Albedo (RGB)", 2D) = "white" {}
+        _Gradation ("gradation", Range(0,1)) = 0
+    }
+    SubShader
+    {
+        Tags { "RenderType"="Opaque" }
+        LOD 200
+
+        CGPROGRAM
+        #pragma surface surf Standard fullforwardshadows
+        #pragma target 3.0
+
+        sampler2D _MainTex;
+        sampler2D _MainTex2;
+        float _Gradation;
+
+        struct Input
+        {
+            float2 uv_MainTex;
+            float2 uv_MainTex2;
+        };
+
+        void surf (Input IN, inout SurfaceOutputStandard o)
+        {
+            float4 c = tex2D (_MainTex, IN.uv_MainTex);
+            float4 d = tex2D (_MainTex2, IN.uv_MainTex2);
+            o.Emission = lerp(c, (c.r + c.g + c.b)/3, 1-_Gradation);
+        }
+        ENDCG
+    }
+    FallBack "Diffuse"
+}
+
+```
+▲ npc shader
+
+```ts
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class LHANPC : MonoBehaviour
+{
+    public SkinnedMeshRenderer smr;
+    private Material mat;
+    private System.Action onLerpComplete;
+    
+
+    void Start()
+    {
+        this.mat = smr.material;
+        this.Lerp();
+
+        this.onLerpComplete = () => {
+            Debug.Log("lerp complete");
+        };
+    }
+
+    private void Lerp()
+    {
+        Debug.Log("lerp");
+        this.StartCoroutine(this.CoLerp());
+    }
+
+    private IEnumerator CoLerp()
+    {
+
+        float val = 0;
+        float speed = 1f;
+
+        while (true)
+        {
+            val = Mathf.Lerp(val, 1, Time.deltaTime * speed * 0.5f);
+            Debug.Log(val);
+            this.mat.SetFloat("_Gradation", val);
+            if (val > 0.7f)
+            {
+                this.mat.SetFloat("_Gradation", 1);
+                break;
+            }
+            yield return null;
+        }
+        this.onLerpComplete();
+    }
+}
+```
+▲ LHANPC 스크립트
+
+</details>
+
 &nbsp;
 
 ![01-ezgif com-video-to-gif-converter](https://github.com/gusdk337/KingdomOfDreamsResult/assets/51481890/59d11946-e3e8-417a-a77a-996850b3951d)
